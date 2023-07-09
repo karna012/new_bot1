@@ -104,7 +104,7 @@ class FuturesApp:
                 # Sleep for 1 second before fetching the data again
                 time.sleep(1)
 
-        except Exception ase:
+        except Exception:
             st.error(f'Error occurred: {str(e)}')
 
 

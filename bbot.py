@@ -8,7 +8,6 @@ from statsmodels.tsa.arima.model import ARIMA
 import matplotlib.pyplot as plt
 import time
 
-
 class FuturesApp:
     def fetch_data(self, symbol, interval, limit):
         endpoint = 'https://fapi.binance.com/fapi/v1/klines'

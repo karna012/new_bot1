@@ -4,8 +4,6 @@ import requests
 import base64
 from datetime import datetime
 import pytz
-from statsmodels.tsa.arima.model import ARIMA
-import matplotlib.pyplot as plt
 import time
 
 class FuturesApp:
@@ -42,13 +40,23 @@ class FuturesApp:
         middle_value = (high_prices + low_prices) / 2
         return middle_value
 
-    def predict_action(self, current_price, middle_value, high_prices):
+    def predict_action(self, current_price, middle_value, high_prices, stop_loss, take_profit, custom_profit_loss):
         danger_threshold = middle_value + 0.7 * (high_prices - middle_value)
+
         if current_price > danger_threshold:
             return 'Danger'
+        elif current_price > take_profit:
+            return 'Sell (Take Profit)'
+        elif current_price < stop_loss:
+            return 'Sell (Stop Loss)'
         elif current_price > middle_value:
             return 'Sell'
         else:
+            for pl in custom_profit_loss:
+                if current_price > pl:
+                    return f'Sell ({pl}% Profit)'
+                elif current_price < -pl:
+                    return f'Sell ({pl}% Loss)'
             return 'Buy'
 
     def run(self):
@@ -64,6 +72,8 @@ class FuturesApp:
 
         limit = st.number_input('Number of rows to fetch', min_value=1, max_value=1440, value=60)
 
+        custom_profit_loss = list(range(10, 101, 10))  # Generate a list of percentages from 10% to 100% in steps of 10
+
         st.markdown('---')
 
         try:
@@ -76,36 +86,33 @@ class FuturesApp:
                     st.subheader('Data Preview')
                     st.dataframe(df.head(limit), height=400)
 
-                    # Calculate 24-hour high and low prices
                     high_prices = df['High'].max()
                     low_prices = df['Low'].min()
-
-                    # Calculate middle value
                     middle_value = self.calculate_middle_value(high_prices, low_prices)
-
-                    # Get current price
                     current_price = df['Close'].iloc[-1]
 
-                    # Predict action
-                    action = self.predict_action(current_price, middle_value, high_prices)
+                    for pl in custom_profit_loss:
+                        stop_loss = current_price - (current_price * pl / 100)
+                        take_profit = current_price + (current_price * pl / 100)
+                        action = self.predict_action(current_price, middle_value, high_prices, stop_loss, take_profit, custom_profit_loss)
 
-                    st.markdown('---')
-                    st.subheader('Strategy')
-                    st.write('24-hour High Price:', high_prices)
-                    st.write('24-hour Low Price:', low_prices)
-                    st.write('Middle Value:', middle_value)
-                    st.write('Current Price:', current_price)
-                    st.write('Action:', action)
+                        st.markdown('---')
+                        st.subheader(f'Strategy (Profit/Loss: {pl}%)')
+                        st.write('24-hour High Price:', high_prices)
+                        st.write('24-hour Low Price:', low_prices)
+                        st.write('Middle Value:', middle_value)
+                        st.write('Current Price:', current_price)
+                        st.write('Stop Loss:', stop_loss)
+                        st.write('Take Profit:', take_profit)
+                        st.write('Action:', action)
 
                 else:
                     st.warning('No data available for the selected pair and time frame.')
 
-                # Sleep for 1 second before fetching the data again
-                time.sleep(1)
+                time.sleep(100000000)
 
-        except Exception:
+        except Exception as e:
             st.error(f'Error occurred: {str(e)}')
-
 
 if __name__ == '__main__':
     bot = FuturesApp()
